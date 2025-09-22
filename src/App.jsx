@@ -117,7 +117,7 @@ export default function App() {
                 <h3 className="text-left">Verified Tutors</h3>
                 <p className="text-[10px] text-left">All tutors on this platform undergo an evaluation process, and only the one our team find qualified are eligible to be on this app to offer services. After all we care for your education and bring only the best for you.</p>
                 <h3 className="text-left">User Privacy protected</h3>
-                <p className="text-[10px] text-left">Only <span className="text-indigo-600">YOU</span> and the tutor can know that you take tutoring lessons. Also, you can choose whether you want one-on-one sessions with tutors available for that, or be grouped with others or take online tutoring. With us, you always have a choice.</p>
+                <p className="text-[10px] text-left">Only <span className="text-pink-300">YOU</span> and the tutor can know that you take tutoring lessons. Also, you can choose whether you want one-on-one sessions with tutors available for that, or be grouped with others or take online tutoring. With us, you always have a choice.</p>
                 <h3 className="text-left">Affordable Rates</h3>
                 <p className="text-[10px] text-left">This platform helps you find a tutor of your choice that aligns with your budget. Since it is developed for students, we find it reasonable to keep the prices affordable to avoid imposing a financial challenge on you. We strive for your satisfaction, hence you can choose a tutor suitable for you and your budget.</p>
              </div>
