@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
               uid: firebaseUser.uid,
               name: firebaseUser.email.split('@')[0],
               email: firebaseUser.email,
-              userType: 'student'
+              role: 'student'
             };
             await setDoc(doc(db, "users", firebaseUser.uid), basicUser);
             setUser(basicUser);
@@ -72,9 +72,9 @@ export const AuthProvider = ({ children }) => {
       const userDoc = {
         name: userData.name,
         email: userData.email,
-        userType: userData.userType,
+        role: userData.role,
         campus: userData.campus,
-        ...(userData.userType === 'tutor' && {
+        ...(userData.role === 'tutor' && {
           expertise: userData.expertise,
           bio: userData.bio,
           yearOfStudy: userData.yearOfStudy,
@@ -108,10 +108,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  
- 
 const uploadProfilePicture = async (userId, file) => {
-  
   try {
     const storageRef = ref(storage, `profile-pictures/${userId}`);
     const snapshot = await uploadBytes(storageRef, file);

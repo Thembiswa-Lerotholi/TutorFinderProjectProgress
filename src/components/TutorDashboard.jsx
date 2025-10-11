@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit, onSnapshot, updateDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 export default function TutorDashboard() {
@@ -36,16 +35,16 @@ export default function TutorDashboard() {
     try {
       const sessionsQuery = query(
         collection(db, "sessions"),
-        where("tutorId", "==", user.uid),
-        where("status", "==", "scheduled"),
-        orderBy("sessionDate", "asc")
+        where("tutorId", "==", user.uid)
       );
-      const sessionsSnapshot = await getDocs(sessionsQuery);
-      const sessionsData = sessionsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setUpcomingSessions(sessionsData);
+      
+      const unsubscribe = onSnapshot(sessionsQuery, (snapshot) => {
+        const sessionsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setUpcomingSessions(sessionsData);
+      });
 
       const reviewsQuery = query(
         collection(db, "reviews"),
@@ -61,6 +60,8 @@ export default function TutorDashboard() {
       setRecentReviews(reviewsData);
 
       calculateStats();
+
+      return () => unsubscribe();
     } catch (error) {
       console.error("Error fetching tutor data:", error);
     }
@@ -73,6 +74,35 @@ export default function TutorDashboard() {
       totalEarnings: 2450,
       averageRating: 4.8
     });
+  };
+
+  const handleStartSession = async (sessionId) => {
+    try {
+      await updateDoc(doc(db, "sessions", sessionId), {
+        status: 'in-progress',
+        startedAt: new Date()
+      });
+      alert('Session started successfully!');
+    } catch (error) {
+      console.error('Error starting session:', error);
+      alert('Error starting session');
+    }
+  };
+
+  const handleRescheduleSession = async (sessionId) => {
+    const newDate = prompt('Enter new date and time (YYYY-MM-DD HH:MM):');
+    if (newDate) {
+      try {
+        await updateDoc(doc(db, "sessions", sessionId), {
+          sessionDate: new Date(newDate),
+          status: 'rescheduled'
+        });
+        alert('Session rescheduled successfully!');
+      } catch (error) {
+        console.error('Error rescheduling session:', error);
+        alert('Error rescheduling session');
+      }
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -311,16 +341,23 @@ export default function TutorDashboard() {
                         <div>
                           <h4 className="text-white font-medium">{session.studentName}</h4>
                           <p className="text-purple-300 text-sm">{session.subject}</p>
+                          <p className="text-purple-300 text-sm">Status: {session.status}</p>
                         </div>
                         <span className="text-purple-200 text-sm bg-purple-800/50 px-2 py-1 rounded">
-                          {new Date(session.sessionDate).toLocaleString()}
+                          {session.sessionDate?.toDate ? new Date(session.sessionDate.toDate()).toLocaleString() : 'Date not set'}
                         </span>
                       </div>
                       <div className="flex space-x-2 mt-3">
-                        <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded text-sm transition-colors">
+                        <button 
+                          onClick={() => handleStartSession(session.id)}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded text-sm transition-colors"
+                        >
                           Start
                         </button>
-                        <button className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-1 px-3 rounded text-sm transition-colors">
+                        <button 
+                          onClick={() => handleRescheduleSession(session.id)}
+                          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-1 px-3 rounded text-sm transition-colors"
+                        >
                           Reschedule
                         </button>
                       </div>

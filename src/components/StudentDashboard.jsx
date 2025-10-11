@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -28,11 +27,11 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchTutors = async () => {
       try {
-        const q = query(
-          collection(db, "users"), 
-          where("userType", "==", "tutor"),
-          orderBy("name")
-        );
+      const q = query(
+  collection(db, "users"), 
+  where("userType", "==", "tutor"),
+  orderBy("name")
+);
         const querySnapshot = await getDocs(q);
         const tutorsData = querySnapshot.docs.map(doc => ({
           id: doc.id,
