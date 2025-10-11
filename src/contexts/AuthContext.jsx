@@ -1,6 +1,13 @@
-
-// src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; 
+import { auth, db, storage } from "../firebase/config"; 
 
 const AuthContext = createContext(null);
 
@@ -14,83 +21,117 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // this effect checks localStorage for a logged-in user on initial load and sets the user state accordingly
   useEffect(() => {
-    const storedUser = localStorage.getItem('tutorFinderUser');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('tutorFinderUser');
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser({ uid: firebaseUser.uid, ...userDoc.data() });
+          } else {
+            const basicUser = {
+              uid: firebaseUser.uid,
+              name: firebaseUser.email.split('@')[0],
+              email: firebaseUser.email,
+              userType: 'student'
+            };
+            await setDoc(doc(db, "users", firebaseUser.uid), basicUser);
+            setUser(basicUser);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      } else {
+        setUser(null);
       }
-    }
+      setLoading(false);
+    });
+
+    return unsubscribe;
   }, []);
 
   const login = async (email, password) => {
     setLoading(true);
-    
-    // this is whereby one would normally call an API to verify credentials so that is simulated here, the purpose is to demonstrate the flow only
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (email && password) {
-          const newUser = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: email.split('@')[0],
-            email: email,
-            userType: 'student' 
-          };
-          setUser(newUser);
-          localStorage.setItem('tutorFinderUser', JSON.stringify(newUser));
-          setLoading(false);
-          resolve({ success: true });
-        } else {
-          setLoading(false);
-          resolve({ success: false, error: 'Invalid credentials' });
-        }
-      }, 1000);
-    });
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return { success: true };
+    } catch (error) {
+      console.error("Login error:", error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signup = async (userData) => {
     setLoading(true);
-    
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (userData.email && userData.password && userData.name) {
-          const newUser = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: userData.name,
-            email: userData.email,
-            userType: userData.userType || 'student',
-            campus: userData.campus,
-            
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      const userDoc = {
+        name: userData.name,
+        email: userData.email,
+        userType: userData.userType,
+        campus: userData.campus,
+        ...(userData.userType === 'tutor' && {
+          expertise: userData.expertise,
+          bio: userData.bio,
+          yearOfStudy: userData.yearOfStudy,
+          hourlyRate: '',
+          availability: ''
+        })
+      };
 
-            // this section conditionally adds tutor-specific fields if the user is a tutor
-            ...(userData.userType === 'tutor' && {
-              expertise: userData.expertise,
-              bio: userData.bio,
-              yearOfStudy: userData.yearOfStudy
-            })
-          };
-          setUser(newUser);
-          localStorage.setItem('tutorFinderUser', JSON.stringify(newUser));
-          setLoading(false);
-          resolve({ success: true });
-        } else {
-          setLoading(false);
-          resolve({ success: false, error: 'All fields are required' });
-        }
-      }, 1000);
-    });
+      await setDoc(doc(db, "users", userCredential.user.uid), userDoc);
+      return { success: true };
+    } catch (error) {
+      console.error("Signup error:", error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('tutorFinderUser');
+  const updateProfile = async (userId, updates) => {
+    setLoading(true);
+    try {
+      await setDoc(doc(db, "users", userId), updates, { merge: true });
+      
+      setUser(prev => ({ ...prev, ...updates }));
+      return { success: true };
+    } catch (error) {
+      console.error("Profile update error:", error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  
+ 
+const uploadProfilePicture = async (userId, file) => {
+  
+  try {
+    const storageRef = ref(storage, `profile-pictures/${userId}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    await setDoc(doc(db, "users", userId), { image: downloadURL }, { merge: true });
+    setUser(prev => ({ ...prev, image: downloadURL }));
+    return { success: true, imageUrl: downloadURL };
+  } catch (error) {
+    console.error("Profile picture upload error:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const value = {
@@ -98,6 +139,8 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     logout,
+    updateProfile,
+    uploadProfilePicture,
     loading
   };
 

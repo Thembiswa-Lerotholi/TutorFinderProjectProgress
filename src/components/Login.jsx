@@ -1,5 +1,3 @@
-
-// src/components/Login.jsx
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +6,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [userType, setUserType] = useState('student');
   const { login, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -38,6 +37,35 @@ export default function Login() {
           </Link>
           <h2 className="mt-8 text-2xl font-semibold text-white">Sign In</h2>
           <p className="mt-2 text-slate-400 text-sm">Welcome back! Please sign in to continue</p>
+        </div>
+        
+        {/* User Type Selection */}
+        <div className="mb-6">
+          <label className="text-white text-sm font-medium mb-3 block">Login as</label>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setUserType('student')}
+              className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
+                userType === 'student' 
+                  ? 'bg-blue-500 border-blue-400 text-white' 
+                  : 'bg-slate-900/30 border-blue-400/30 text-white hover:bg-slate-800/30'
+              }`}
+            >
+              Student
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserType('tutor')}
+              className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
+                userType === 'tutor' 
+                  ? 'bg-blue-500 border-blue-400 text-white' 
+                  : 'bg-slate-900/30 border-blue-400/30 text-white hover:bg-slate-800/30'
+              }`}
+            >
+              Tutor
+            </button>
+          </div>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">
